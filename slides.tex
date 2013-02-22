@@ -1,0 +1,291 @@
+\documentclass[compress]{beamer}
+
+\beamertemplatetransparentcovered
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}
+{\leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=.3333\paperwidth,left]{}%
+      \insertshortinstitute
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.3333\paperwidth,center]{}%
+      \insertframenumber{} / \inserttotalframenumber
+    \end{beamercolorbox}
+    \begin{beamercolorbox}[wd=.3333\paperwidth,right]{}%
+      \insertshortdate{}
+      \;
+    \end{beamercolorbox}
+  }%
+}
+
+\usepackage{listings}
+\usepackage{color}
+\usepackage{minted}
+\usepackage{hyperref}
+\usepackage{textcomp}
+\usepackage{marvosym}
+\usepackage{xcolor}
+\usepackage{graphicx}
+
+\usetheme[light,accent=violet]{solarized}
+
+\usepackage{fontspec}
+\setmainfont[Mapping=tex-text]{Source Sans Pro}
+\setmonofont[Mapping=tex-text]{Inconsolata}
+
+\graphicspath{{./images/}}
+
+\title{On SaltStack}
+\subtitle{Configuration management and remote execution.}
+
+\author{Stas Sușcov (\href{mailto:stas@nerd.ro}{stas@nerd.ro})}
+\date{February 23th, 2013}
+
+\institute{GeekMeet \#15, Cluj-Napoca, Transylvania}
+
+\begin{document}
+
+% ----------------------------------------------------------------------------
+% *** Titlepage <<<
+% ----------------------------------------------------------------------------
+\maketitle
+% ----------------------------------------------------------------------------
+% *** END of Titlepage >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{About Stas}
+
+\begin{itemize}
+  \item a \href{http://stas.nerd.ro}{nerd}
+  \item picky developer
+  \item interests: web/operations
+  \item (\Heart (food wine cycling))
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+  \begin{center}
+    \huge In August, 2012, I was hired to help migrate one's company monolithic
+    infrastructure into the cloud (Linode).
+    \\
+    \small Lots of experience I am sharing today comes from solving their issues.
+  \end{center}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{The common story}
+
+\begin{itemize}[<+->]
+  \item you start with a shared hosting
+  \item business grows, you buy more bandwidth and space
+  \item business grows, you are thinking to move to dedicated, but you don't, the \emph{works for me} attitude is on
+  \item you have a gig with a dozen of employees, you are living a nightmare
+  \item development gets slow, knowledge is spread over a couple of people (if you are lucky)
+  \item end of story: you are afraid to restart \emph{Apache} because it might not start back!
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Identifying the issue}
+
+\begin{itemize}[<+->]
+  \item one server for everything is never \emph{OK}
+  \item lack of documentation, writing docs for servers is harder compared to software
+  \item lack of a \emph{changelog}, why service \emph{X} runs and service \emph{Y} is stopped
+  \item tell me something about this firewall rule (no trolling intended)
+  \item lack of deployment tools
+  \item lack of provisioning solutions
+  \item monitoring should be proactive, graphs are good but still \ldots
+  \item lack of an operations-friendly culture (postmortems are for everyone not just your boss)
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+  \begin{center}
+    \huge We work in an environment where tools reached a level of quality where
+    not trusting those, raises lots of questions!
+  \end{center}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Picking new tools}
+
+Picking new tools is always tricky, you might lose more than win, here are some tips:
+\begin{itemize}[<+->]
+  \item ask your colleagues developers, you will be impressed to see how many are more than just \emph{programmers}
+  \item start picking tools based on current software stack (if you are doing \emph{Python}, look for tools written in that language)
+  \item do not judge tools by age, consider facts like documentation, extensibility, development cycle first
+  \item last but not least, installation and upgrade actions should be as easy as possible
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{What is SaltStack?}
+
+\begin{itemize}[<+->]
+  \item SaltStack was designed as a centralized remote execution tool
+    \begin{itemize}[<+->]
+      \item runs tasks in parallel
+      \item uses ØMQ for communication (authenticates using SSH keys)
+      \item stand-alone, does not require any other dependencies
+    \end{itemize}
+  \item SaltStack has an easy to pick configuration management system
+    \begin{itemize}[<+->]
+      \item configuration management files use an \emph{YAML} syntax
+      \item configuration is split into modules and states, which represent pure Python modules
+      \item extensible API, overwrite a module by placing the new Python file into local directory (Salt will update machines on its own)
+      \item flexible API, ready to use solutions for use-cases like peering, auto-discovery, syndication, white-list execution, returners
+    \end{itemize}
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Remote execution}
+
+\begin{itemize}[<+->]
+  \item being centralized, service is split between master and minions (slaves)
+  \item every salt installation generates an SSH key, that will be used to authenticate the machine
+  \item master manages minions/authentication using \texttt{salt-key} tool
+  \item master can target minions based on: 
+    \begin{itemize}
+        \item globbing and regular expressions
+        \item static information such as OS, software versions, virtualization, CPU, memory \ldots
+        \item statically defined groups
+        \item compound matchers
+        \item batching execution
+    \end{itemize}
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}[fragile]
+  \begin{center}
+    \begin{verbatim}
+    root@master:~# salt 'slave*' test.ping
+                           ^ ^
+                     ______| |__________________
+                     target  function to execute
+    \end{verbatim}
+  \end{center}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Modules}
+
+\begin{itemize}[<+->]
+  \item modules represent functions that \texttt{salt} tool can run on minions
+  \item every module is either Python or Cython code
+  \item modules can be extended or overwritten by dropping new ones into master \texttt{file\_roots} directory called \texttt{\_modules}
+  \item configuration management states, underneath, use modules too, in fact the module name itself is called \texttt{state}
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Configuration management, or state files}
+
+\begin{itemize}[<+->]
+  \item SaltStack uses \texttt{YAML} syntax like files called \texttt{SLS} files to describe minion configuration
+  \item state files attributes are mapped directly to modules
+  \item states can be extended or overwritten by dropping new ones into master \texttt{file\_roots} directory called \texttt{\_states}
+  \item states can be grouped using \emph{targeting} in the top file \texttt{top.sls}, and executed using \texttt{state.highstate} call
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+  \begin{center}
+  \huge Questions please\ldots
+  \\
+  Thank you for your time.
+  \end{center}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Online resources worth checking}
+
+\begin{itemize}
+  \item SaltStack Documentation -- \href{http://salt.readthedocs.org/en/latest/}{salt.readthedocs.org/en/latest/}
+  \item SaltStack Website -- \href{http://saltstack.com/about.html}{saltstack.org}
+  \item SaltStack Ops School Chapter -- \href{http://ops-school.readthedocs.org/en/latest/config\_management.html\#saltstack}{ops-school.readthedocs.org/en/latest/config\_management.html\#saltstack}
+\end{itemize}
+
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+\end{document}
