@@ -1,0 +1,292 @@
+\documentclass[compress]{beamer}
+
+\beamertemplatetransparentcovered
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}
+{\leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=.3333\paperwidth,left]{}%
+      \insertshortinstitute
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.3333\paperwidth,center]{}%
+      \insertframenumber{} / \inserttotalframenumber
+    \end{beamercolorbox}
+    \begin{beamercolorbox}[wd=.3333\paperwidth,right]{}%
+      \insertshortdate{}
+      \;
+    \end{beamercolorbox}
+  }%
+}
+
+\usepackage{listings}
+\usepackage{color}
+\usepackage{minted}
+\usepackage{hyperref}
+\usepackage{textcomp}
+\usepackage{marvosym}
+\usepackage{xcolor}
+\usepackage{graphicx}
+
+\usetheme[light,accent=violet]{solarized}
+
+\usepackage{fontspec}
+\setmainfont[Mapping=tex-text]{Source Sans Pro}
+\setmonofont[Mapping=tex-text]{Inconsolata}
+
+\graphicspath{{./images/}}
+
+\title{Despre SaltStack}
+\subtitle{Organizarea configurației și execuție de la distanță.}
+
+\author{Stas Sușcov (\href{mailto:stas@nerd.ro}{stas@nerd.ro})}
+\date{23 Februarie, 2013}
+
+\institute{GeekMeet \#15, Cluj-Napoca, Transylvania}
+
+\begin{document}
+
+% ----------------------------------------------------------------------------
+% *** Titlepage <<<
+% ----------------------------------------------------------------------------
+\maketitle
+% ----------------------------------------------------------------------------
+% *** END of Titlepage >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Despre Stas}
+
+\begin{itemize}
+  \item a \href{http://stas.nerd.ro}{nerd}
+  \item dezvoltator pretențios
+  \item interese: web/operations
+  \item (\Heart (mâncare vin bicicletă))
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+  \begin{center}
+    \huge În August, 2012, am fost angajat să reorganizez infrastructura monolitică a unei companii
+    în cloud (pe Linode).
+    \\
+    \small Multe lucruri despre care voi povesti astăzi, ține de experiența obținută în rezolvarea problemelor lor.
+  \end{center}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{O istorie comună}
+
+\begin{itemize}[<+->]
+  \item totul începe cu o găzduire partajată
+  \item când crește „afacerea”, mai cumperi spațiu și bandă
+  \item când mai crește „afacerea”, știi că un serviciu dedicat ar fi mai eficient, însă atitudinea „merge și așa” e greu de schimbat
+  \item acum „afacerea” ta are deja 10 oameni și coșmarul abia începe
+  \item dezvoltarea încetinește, cunoștințele despre „ce-i pe servere” sunt împrăștiate (actuali și foști angajați)
+  \item sfârșit de istorie: îți este frică să repornești \emph{Apache}, că poate nu mai pornește!
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Identificarea problemei}
+
+\begin{itemize}[<+->]
+  \item un server pentru orice nu e \emph{OK}
+  \item lipsa documentației, e mai greu de scris pentru servere decât pentru software
+  \item lipsa unui \emph{istoric}, de ce serviciul \emph{X} rulează, iar serviciul \emph{Y} a fost oprit
+  \item regulile de firewall nu spun prea multe
+  \item lipsa uneltelor de deployment
+  \item lipsa uneltelor de provisioning
+  \item uneltele de monitorizare trebuie să fie proactive, graficele nu sunt deajuns \ldots
+  \item lipsa unei culturi „operations-friendly” (post-mortem-urile sunt pentru toată lumea, nu doar boși)
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+  \begin{center}
+    \huge Din fericire, am ajuns să lucrăm în niște medii unde uneltele oferă un
+    nivel de calitate înalt, astfel ignoranța folosirii acestora trezește multe întrebări!
+  \end{center}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Cum alegem uneltele?}
+
+Alegerea uneltelor noi poate fi un lucru dificil, alegerea greșită poate strica mai mult decât ajuta. Ceva sfaturi:
+\begin{itemize}[<+->]
+  \item povestiți despre unelte cu colegii voștri, veți fi impresionați câți sunt mai mult decât doar \emph{programatori}
+  \item alegeți uneltele în funcție de software-ul deja existent/folosit (dacă scrieți \emph{Python}, căutați unelte scrise în acel limbaj)
+  \item nu judecați uneltele după vechime, lucrurile cum ar fi documentația, extensibilitatea, ciclul de dezvoltare sunt mult mai importante
+  \item nu în ultimul rând, instalarea și actualizarea uneltelor trebuie să fie simplă
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Ce este SaltStack?}
+
+\begin{itemize}[<+->]
+  \item SaltStack a fost creat drept o soluție centralizată pentru execuția de la distanță
+    \begin{itemize}[<+->]
+      \item rulează comenzile în paralel
+      \item folosește ØMQ pentru comunicare (se autentifică cu chei SSH)
+      \item nu are nevoie de alte dependințe
+    \end{itemize}
+  \item SaltStack are implementat un sistem simplu de organizarea configurației
+    \begin{itemize}[<+->]
+      \item fișierele de configurare folosesc o sintaxă \emph{YAML}
+      \item principalele componente sunt modulele și stările, care în spate sunt de fapt module pure Python
+      \item API extensibil, crearea sau modificarea unei componente se face prin adăugare noului fișier în directorul local (Salt va actualiza singur mașinile)
+      \item API flexibil, support pentru diferite organizări cum ar fi peering, auto-discovery, syndication, execuție pe bază de white-list, returners
+    \end{itemize}
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Execuția la distanță}
+
+\begin{itemize}[<+->]
+  \item fiind centralizat, serviciul este separat între master și minioni („sclavi”)
+  \item fiecare instalație de salt generează o cheie SSH, aceasta va fi folosită la autentificare mașinii
+  \item pe master se folosește unealta \texttt{salt-key} pentru administrarea „scalvilor” și a cheilor
+  \item pe master se pot alege mașinile folosind una din metode: 
+    \begin{itemize}
+        \item nume sau regex
+        \item informații statice cum ar fi SO, versiuni software, virtualizare, CPU, memorie \ldots
+        \item grupurilor definite static
+        \item compounerea mai multor metode
+        \item execuții în serie
+    \end{itemize}
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}[fragile]
+  \begin{center}
+    \begin{verbatim}
+    root@master:~# salt 'slave*' test.ping
+                               ^ ^
+                    ___________| |________________________
+                    ținta aleasă  funcția să fie executată
+    \end{verbatim}
+  \end{center}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Modulele}
+
+\begin{itemize}[<+->]
+  \item modulele reprezintă funcții ce pot fi folosite de unealta \texttt{salt} pentru a rula pe minioni
+  \item modulele pot fi cod Python sau Cython
+  \item pentru module noi, adăugați fișierul pe master în directorul \texttt{file\_roots} cu numele de \texttt{\_modules}
+  \item stările folosite la organizarea configurației, folosesc direct modulele, de fapt și stările sunt un modul cu numele \texttt{state}
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Organizarea configurației, sau fișierele de stări}
+
+\begin{itemize}[<+->]
+  \item SaltStack folosește fișiere cu sintaxa \texttt{YAML} care se numesc \texttt{SLS}-uri unde se descrie configurația minion-ului
+  \item atributele dintr-un fișier de stare se mapează direct la un modul
+  \item pentru stări noi, adăugați fișierul pe master în directorul \texttt{file\_roots} cu numele de \texttt{\_states}
+  \item stările pot fi grupate pentru a descrie o mașină cu mai multe stări, în fișierul \texttt{top.sls}, după care se apelează funcția \texttt{state.highstate}
+\end{itemize}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+  \begin{center}
+  \huge Întrebări\ldots
+  \\
+  Mulțumesc pentru atenție.
+  \end{center}
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+% ----------------------------------------------------------------------------
+% *** Frame <<<
+% ----------------------------------------------------------------------------
+\begin{frame}
+\frametitle{Resurse ce merită să fie verificate}
+
+\begin{itemize}
+  \item SaltStack Documentation -- \href{http://salt.readthedocs.org/en/latest/}{salt.readthedocs.org/en/latest/}
+  \item SaltStack Website -- \href{http://saltstack.com/about.html}{saltstack.org}
+  \item SaltStack Ops School Chapter -- \href{http://ops-school.readthedocs.org/en/latest/config\_management.html\#saltstack}{ops-school.readthedocs.org/en/latest/config\_management.html\#saltstack}
+  \item AppThemes SaltStack -- \href{https://github.com/AppThemes/salt-config-example}{github.com/AppThemes/salt-config-example}
+\end{itemize}
+
+\end{frame}
+% ----------------------------------------------------------------------------
+% *** END of Frame >>>
+% ----------------------------------------------------------------------------
+
+\end{document}
